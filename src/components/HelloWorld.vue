@@ -1,6 +1,7 @@
 <template>
-  <div class="bg-light" style="word-break: break-all;">
+  <div style="word-break: break-all;">
     <b-navbar toggleable="lg" type="dark" variant="info">
+      <b-container :fluid="fluid">
       <b-navbar-brand href="http://icc.jp-r.com">IIIF Curation Comparison</b-navbar-brand>
       <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
       <b-collapse id="nav-collapse" is-nav>
@@ -9,15 +10,17 @@
           <b-button v-b-modal.modal-1 class="m-1">
             <i class="fas fa-search"></i> Advanced Search
           </b-button>
-          <b-button class="m-1" @click="sidebar_open_flg = !sidebar_open_flg">
-            <template v-if="sidebar_open_flg">Hide Sidebar</template>
-            <template v-else>Show Sidebar</template>
+          <b-button v-b-modal.modal-settings class="m-1">
+            <i class="fas fa-cog"></i>
           </b-button>
+          
         </b-navbar-nav>
+        
       </b-collapse>
+      </b-container>
     </b-navbar>
 
-    <b-container v-show="!curation" class="my-5">
+    <b-container :fluid="fluid" v-show="!curation" class="my-5">
       <b-form-group id="input-group-1" label="Curation URI:" label-for="input-1">
         <b-form-input
           id="input-1"
@@ -31,107 +34,62 @@
       <b-button variant="primary" @click="form_submit">Submit</b-button>
     </b-container>
 
-    <b-container fluid v-show="curation">
-      <b-row class="my-5">
-        <b-col :sm="3" v-show="sidebar_open_flg">
-          <b-card
-            class="mb-4"
-            v-show="agg.buckets.length > 0"
-            v-for="(agg, label) in data.aggregations"
-            :key="label"
-            :header="label"
-          >
-            <b-button
-              type="button"
-              @click="search"
-              class="mb-3"
-              size="sm"
-              variant="outline-secondary"
-            >
-              <i class="fas fa-search"></i> Search
-            </b-button>
-            <b-form-group>
-              <b-form-checkbox
-                v-for="(bucket, index) in (query.aggs[label].flg ? agg.buckets : agg.buckets.slice(0,facet_show_size))"
-                v-model="query.aggs[label].value"
-                :key="index"
-                :value="bucket.key"
-                name="flavour-3a"
-              >
-                {{ bucket.key }}
-                <b-badge>{{bucket.doc_count.toLocaleString()}}</b-badge>
-              </b-form-checkbox>
-            </b-form-group>
-            <div class="text-right">
-              <b-button
-                v-if="agg.buckets.length > facet_show_size"
-                type="button"
-                @click="query.aggs[label].flg = !query.aggs[label].flg"
-                variant="link"
-                size="sm"
-              >
-                <template v-if="query.aggs[label].flg">Show less</template>
-                <template v-else>Show more {{agg.buckets.length - facet_show_size}} items</template>
-              </b-button>
-            </div>
-          </b-card>
-        </b-col>
-        <b-col :sm="sidebar_open_flg ? 9 : 12">
-          <b-row class="mb-4">
-            <b-col
-              sm="12"
-              class="mb-2"
-            >{{total > 0 ? ((currentPage - 1) * perPage + 1).toLocaleString() : 0}} - {{currentPage * perPage > total ? total.toLocaleString() : (currentPage * perPage).toLocaleString()}} of {{total.toLocaleString()}} results</b-col>
-            <b-col sm="12">
-              <b-form inline>
-                <label class="mr-sm-2" for="inline-form-custom-select-pref">Per page:</label>
+    <div class="mb-0 py-3" style="background-color: #f9f6f0">
+      <b-container :fluid="fluid">
+        <b-row>
+          <b-col
+              sm="6"
+            ><h3 class="justify-content-center align-self-center my-3">{{total > 0 ? ((currentPage - 1) * perPage + 1).toLocaleString() : 0}} - {{currentPage * perPage > total ? total.toLocaleString() : (currentPage * perPage).toLocaleString()}} of {{total.toLocaleString()}} results</h3></b-col>
+          <b-col sm="6">
+            <b-row>
+              <b-col sm="4">
+                Sort by
 
                 <b-form-select
-                  class="mb-2 mr-sm-2 mb-sm-0"
-                  v-model="perPage"
-                  :options="{ 20: '20', 50: '50', 100: '100', 1000: '1000'}"
-                  id="inline-form-custom-select-pref"
-                ></b-form-select>
-
-                <label class="mr-sm-2" for="inline-form-custom-select-pref">Sort by:</label>
-
-                <b-form-select
-                  class="mb-2 mr-sm-2 mb-sm-0"
+                  class="mb-2 mr-sm-2 mb-sm-0 mt-2"
                   v-model="sort"
                   :options="sort_options"
                   id="inline-form-custom-select-pref"
                 ></b-form-select>
 
-                <div class="input-group mb-2 mr-sm-2 mb-sm-0">
-                  <div class="btn-group-toggle btn-group">
-                    <label
-                      class="btn btn-outline-primary"
-                      :class="[d_option.value == grid ? 'active' : '']"
-                      v-for="(d_option, index) in d_options"
-                      :key="index"
-                    >
-                      <input v-model="grid" type="radio" autocomplete="off" :value="d_option.value" />
-                      <span v-html="d_option.text"></span>
-                    </label>
-                  </div>
-                </div>
-
-                <label
-                  class="mr-sm-2"
-                  for="inline-form-custom-select-pref"
-                  v-show="grid == 'grid'"
-                >Per row:</label>
+              </b-col>
+              <b-col sm="4">
+                Items per page
 
                 <b-form-select
-                  class="mb-2 mr-sm-2 mb-sm-0"
-                  v-model="col"
-                  :options="{ 12: '12', 6: '6', 4: '4'}"
+                  class="mb-2 mr-sm-2 mb-sm-0 mt-2"
+                  v-model="perPage"
+                  :options="{ 20: '20', 50: '50', 100: '100', 1000: '1000'}"
                   id="inline-form-custom-select-pref"
-                  v-show="grid == 'grid'"
                 ></b-form-select>
-              </b-form>
-            </b-col>
-          </b-row>
+              </b-col>
+              <b-col sm="4">
+                Layout
+                <br />
+                <div class="btn-group-toggle btn-group mt-2">
+                  <label
+                    class="btn btn-light"
+                    :class="[d_option.value == grid ? 'active' : '']"
+                    v-for="(d_option, index) in d_options"
+                    :key="index"
+                  >
+                    <input v-model="grid" type="radio" autocomplete="off" :value="d_option.value" />
+                    <span v-html="d_option.text"></span>
+                  </label>
+                </div>
+              </b-col>
+            </b-row>
+          </b-col>
+        </b-row>
+      </b-container>
+    </div>
+
+    <b-container :fluid="fluid" v-show="curation">
+      <b-row class="my-5">
+        
+        <b-col :sm="sidebar_open_flg ? 8 : 12" order-sm="2" class="mb-5">
+
+          <h3 class="mb-4">Search results</h3>
 
           <div class="text-right mb-4" v-show="grid != 'table'">
             <b-button class="my-2 mr-2" @click="select_all">
@@ -239,13 +197,73 @@
             class="mb-4"
           ></b-pagination>
         </b-col>
+        <b-col :sm="4" v-show="sidebar_open_flg" order-sm="1">
+          <h3 class="mb-4">Refine your search</h3>
+          <div style="background-color: #f9f6f0" class="p-4">
+          <b-card
+            class="mb-4"
+            v-show="agg.buckets.length > 0"
+            v-for="(agg, label) in data.aggregations"
+            :key="label"
+            :header="label"
+          >
+            
+            <b-form-group>
+              <b-form-checkbox
+                v-for="(bucket, index) in (query.aggs[label].flg ? agg.buckets : agg.buckets.slice(0,facet_show_size))"
+                v-model="query.aggs[label].value"
+                :key="index"
+                :value="bucket.key"
+                name="flavour-3a"
+              >
+                {{ bucket.key }}
+                <b-badge>{{bucket.doc_count.toLocaleString()}}</b-badge>
+              </b-form-checkbox>
+            </b-form-group>
+            <div class="text-right">
+              <b-button
+                v-if="agg.buckets.length > facet_show_size"
+                type="button"
+                @click="query.aggs[label].flg = !query.aggs[label].flg"
+                variant="link"
+                size="sm"
+              >
+                <template v-if="query.aggs[label].flg">Show less</template>
+                <template v-else>Show more {{agg.buckets.length - facet_show_size}} items</template>
+              </b-button>
+            </div>
+            <b-button
+              type="button"
+              @click="search"
+              class="mb-3"
+              size="sm"
+              variant="primary"
+            >
+              Update
+            </b-button>
+            
+          </b-card>
+          </div>
+        </b-col>
       </b-row>
     </b-container>
+    <!-- 
     <footer class="bd-footer text-muted">
       <div class="container">
         <hr />
         <p class="mt-4 pb-5 text-center">
           <a href="https://researchmap.jp/nakamura.satoru/?lang=english">Satoru Nakamura</a>
+        </p>
+        
+      </div>
+    </footer>
+    -->
+    <back-to-top text="Back to top"></back-to-top>
+
+    <footer class="py-5 navbar-dark bg-dark text-white">
+      <div class="container">
+        <p class="mt-4 pb-5 text-center">
+          <a class="text-white" href="https://researchmap.jp/nakamura.satoru/?lang=english">Satoru Nakamura</a>
         </p>
       </div>
     </footer>
@@ -268,15 +286,51 @@
         <i class="fas fa-search"></i> Search
       </b-button>
     </b-modal>
+
+    <b-modal id="modal-settings" size="lg" title="Settings" hide-footer>
+      <p><a :href="curation" target="_blank">{{curation}}</a></p>
+      <p>
+          <b-button class="m-1" @click="sidebar_open_flg = !sidebar_open_flg">
+            <template v-if="sidebar_open_flg">Hide Sidebar</template>
+            <template v-else>Show Sidebar</template>
+          </b-button>
+        </p>
+        <p>
+          <b-button class="m-1" @click="fluid = !fluid">
+            <template v-if="fluid">Container Fluid False</template>
+            <template v-else>Container Fluid True</template>
+          </b-button>
+        </p>
+        <p>
+          <label
+                  class="mr-sm-2"
+                  for="inline-form-custom-select-pref"
+                  v-show="grid == 'grid'"
+                >Per row:</label>
+
+                <b-form-select
+                  class="mb-2 mr-sm-2 mb-sm-0"
+                  v-model="col"
+                  :options="{ 12: '12', 6: '6', 4: '4'}"
+                  id="inline-form-custom-select-pref"
+                  v-show="grid == 'grid'"
+                ></b-form-select>
+                </p>
+    </b-modal>
   </div>
 </template>
 
 <script>
 import axios from "axios";
+import BackToTop from "vue-backtotop";
 export default {
+  components: {
+    BackToTop
+  },
   name: "HelloWorld",
   data() {
     return {
+      fluid: false,
       form_value: "",
       data: [],
       currentPage: 1,
@@ -879,11 +933,20 @@ export default {
     },
     form_submit() {
       let curation_uri = this.form_value;
-      let flg = true;
-      if (flg) {
-        this.curation = curation_uri;
-        this.init_curation(curation_uri, {});
-      }
+      axios
+        .get(curation_uri)
+        .then(response => {
+          if (
+            response.data["@type"] &&
+            response.data["@type"] == "cr:Curation"
+          ) {
+            this.curation = curation_uri;
+            this.init_curation(curation_uri, {});
+          }
+        })
+        .catch(err => {
+          alert(err);
+        });
     }
   },
 
