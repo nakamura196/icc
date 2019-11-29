@@ -2,25 +2,27 @@
   <div style="word-break: break-all;">
     <b-navbar toggleable="lg" type="dark" variant="info">
       <b-container :fluid="fluid">
-      <b-navbar-brand href="http://icc.jp-r.com">IIIF Curation Comparison</b-navbar-brand>
-      <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
-      <b-collapse id="nav-collapse" is-nav>
-        <!-- Right aligned nav items -->
-        <b-navbar-nav class="ml-auto" v-show="curation">
-          <b-button v-b-modal.modal-1 class="m-1">
-            <i class="fas fa-search"></i> Advanced Search
-          </b-button>
-          <b-button v-b-modal.modal-settings class="m-1">
-            <i class="fas fa-cog"></i>
-          </b-button>
-          
-        </b-navbar-nav>
-        
-      </b-collapse>
+        <b-navbar-brand href="http://icc.jp-r.com">IIIF Curation Comparison</b-navbar-brand>
+        <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
+        <b-collapse id="nav-collapse" is-nav>
+          <!-- Right aligned nav items -->
+          <b-navbar-nav class="ml-auto">
+            <div v-show="curation">
+              <b-button v-b-modal.modal-1 class="m-1">
+                <i class="fas fa-search"></i> Advanced Search
+              </b-button>
+            </div>
+            <!-- Navbar dropdowns -->
+            <b-nav-item-dropdown text="Menu" right class="m-1">
+              <b-dropdown-item v-b-modal.modal-settings v-show="curation">Settings</b-dropdown-item>
+              <b-dropdown-item target="_blank" href="https://github.com/nakamura196/icc">GitHub <i class="fas fa-external-link-alt"></i></b-dropdown-item>
+            </b-nav-item-dropdown>
+          </b-navbar-nav>
+        </b-collapse>
       </b-container>
     </b-navbar>
 
-    <b-container :fluid="fluid" v-show="!curation" class="my-5">
+    <b-container :fluid="fluid" class="my-5" v-show="!curation">
       <b-form-group id="input-group-1" label="Curation URI:" label-for="input-1">
         <b-form-input
           id="input-1"
@@ -34,236 +36,224 @@
       <b-button variant="primary" @click="form_submit">Submit</b-button>
     </b-container>
 
-    <div class="mb-0 py-3" style="background-color: #f9f6f0">
+    <div v-show="curation">
+      <div class="mb-0 py-3" style="background-color: #f9f6f0">
+        <b-container :fluid="fluid">
+          <b-row>
+            <b-col sm="6">
+              <h3
+                class="justify-content-center align-self-center my-3"
+              >{{total > 0 ? ((currentPage - 1) * perPage + 1).toLocaleString() : 0}} - {{currentPage * perPage > total ? total.toLocaleString() : (currentPage * perPage).toLocaleString()}} of {{total.toLocaleString()}} results</h3>
+            </b-col>
+            <b-col sm="6">
+              <b-row>
+                <b-col sm="4">
+                  Sort by
+                  <b-form-select
+                    class="mb-2 mr-sm-2 mb-sm-0 mt-2"
+                    v-model="sort"
+                    :options="sort_options"
+                    id="inline-form-custom-select-pref"
+                  ></b-form-select>
+                </b-col>
+                <b-col sm="4">
+                  Items per page
+                  <b-form-select
+                    class="mb-2 mr-sm-2 mb-sm-0 mt-2"
+                    v-model="perPage"
+                    :options="{ 20: '20', 50: '50', 100: '100', 1000: '1000'}"
+                    id="inline-form-custom-select-pref"
+                  ></b-form-select>
+                </b-col>
+                <b-col sm="4">
+                  Layout
+                  <br />
+                  <div class="btn-group-toggle btn-group mt-2">
+                    <label
+                      class="btn btn-light"
+                      :class="[d_option.value == grid ? 'active' : '']"
+                      v-for="(d_option, index) in d_options"
+                      :key="index"
+                    >
+                      <input v-model="grid" type="radio" autocomplete="off" :value="d_option.value" />
+                      <span v-html="d_option.text"></span>
+                    </label>
+                  </div>
+                </b-col>
+              </b-row>
+            </b-col>
+          </b-row>
+        </b-container>
+      </div>
+
       <b-container :fluid="fluid">
-        <b-row>
-          <b-col
-              sm="6"
-            ><h3 class="justify-content-center align-self-center my-3">{{total > 0 ? ((currentPage - 1) * perPage + 1).toLocaleString() : 0}} - {{currentPage * perPage > total ? total.toLocaleString() : (currentPage * perPage).toLocaleString()}} of {{total.toLocaleString()}} results</h3></b-col>
-          <b-col sm="6">
-            <b-row>
-              <b-col sm="4">
-                Sort by
+        <b-row class="my-5">
+          <b-col :sm="sidebar_open_flg ? 8 : 12" order-sm="2" class="mb-5">
+            <h3 class="mb-4">Search results</h3>
 
-                <b-form-select
-                  class="mb-2 mr-sm-2 mb-sm-0 mt-2"
-                  v-model="sort"
-                  :options="sort_options"
-                  id="inline-form-custom-select-pref"
-                ></b-form-select>
+            <div class="text-right mb-4" v-show="grid != 'table'">
+              <b-button class="my-2 mr-2" @click="select_all">
+                <i class="fas fa-check-square"></i> Select All
+              </b-button>
+              <b-button class="my-2 mr-2" @click="deselect_all">
+                <i class="fas fa-square"></i> Unselect All
+              </b-button>
+              <b-button class="my-2 mr-2" variant="info" @click="compare">
+                Compare
+                <i class="fas fa-external-link-alt"></i>
+              </b-button>
+            </div>
 
-              </b-col>
-              <b-col sm="4">
-                Items per page
+            <b-pagination
+              v-if="total > 0"
+              v-model="currentPage"
+              :total-rows="total"
+              :per-page="perPage"
+              aria-controls="my-table"
+              align="center"
+              class="mb-4"
+            ></b-pagination>
 
-                <b-form-select
-                  class="mb-2 mr-sm-2 mb-sm-0 mt-2"
-                  v-model="perPage"
-                  :options="{ 20: '20', 50: '50', 100: '100', 1000: '1000'}"
-                  id="inline-form-custom-select-pref"
-                ></b-form-select>
-              </b-col>
-              <b-col sm="4">
-                Layout
-                <br />
-                <div class="btn-group-toggle btn-group mt-2">
-                  <label
-                    class="btn btn-light"
-                    :class="[d_option.value == grid ? 'active' : '']"
-                    v-for="(d_option, index) in d_options"
-                    :key="index"
-                  >
-                    <input v-model="grid" type="radio" autocomplete="off" :value="d_option.value" />
-                    <span v-html="d_option.text"></span>
-                  </label>
-                </div>
+            <b-row v-show="grid == 'grid'">
+              <b-col :sm="(12/col)" v-for="(value, index) in hits" :key="index">
+                <b-card no-body class="mb-4">
+                  <b-link :href="value._url" target="_blank" style="background-color: black;">
+                    <b-img-lazy
+                      v-if="value._thumbnail"
+                      :src="value._thumbnail"
+                      alt="Image 1"
+                      style="display: flex; margin: auto; max-height: 150px; max-width: 100%;"
+                    ></b-img-lazy>
+                  </b-link>
+
+                  <b-card-body>
+                    <b-link :href="value._url" target="_blank">
+                      <b>{{value._label}}</b>
+                    </b-link>
+
+                    <b-form-checkbox v-model="value._checked" name="check-button" switch></b-form-checkbox>
+                  </b-card-body>
+                </b-card>
               </b-col>
             </b-row>
+
+            <b-card
+              no-body
+              class="mb-4"
+              v-for="(value, index) in hits"
+              :key="index"
+              v-show="grid == 'list'"
+            >
+              <b-card-body>
+                <b-row>
+                  <b-col sm="3">
+                    <b-link :href="value._url" target="_blank">
+                      <b-img-lazy
+                        v-if="value._thumbnail"
+                        :src="value._thumbnail"
+                        alt="Image 1"
+                        style="max-height: 150px; max-width: 100%;"
+                        class="pb-2"
+                        center
+                      ></b-img-lazy>
+                    </b-link>
+                  </b-col>
+                  <b-col sm="9">
+                    <b-link :href="value._url" target="_blank">
+                      <b>{{value._label}}</b>
+                    </b-link>
+                    <b-card-text>{{value.metadata}}</b-card-text>
+                    <b-form-checkbox v-model="value._checked" name="check-button" switch></b-form-checkbox>
+                  </b-col>
+                </b-row>
+              </b-card-body>
+            </b-card>
+
+            <b-table
+              class="mb-4"
+              striped
+              hover
+              :fields="fields"
+              :items="items_table"
+              responsive
+              v-show="grid == 'table'"
+            >
+              <template v-slot:cell(_label)="data">
+                <b-link :href="data.item._url" target="_blank">
+                  <b>{{data.item._label}}</b>
+                </b-link>
+              </template>
+
+              <template v-slot:cell()="data">{{ data.value }}</template>
+            </b-table>
+
+            <b-pagination
+              v-if="total > 0"
+              v-model="currentPage"
+              :total-rows="total"
+              :per-page="perPage"
+              aria-controls="my-table"
+              align="center"
+              class="mb-4"
+            ></b-pagination>
+          </b-col>
+          <b-col :sm="4" v-show="sidebar_open_flg" order-sm="1">
+            <h3 class="mb-4">Refine your search</h3>
+            <div style="background-color: #f9f6f0" class="p-4">
+              <b-card
+                class="mb-4"
+                v-show="agg.buckets.length > 0"
+                v-for="(agg, label) in data.aggregations"
+                :key="label"
+                :header="label"
+              >
+                <b-form-group>
+                  <b-form-checkbox
+                    v-for="(bucket, index) in (query.aggs[label].flg ? agg.buckets : agg.buckets.slice(0,facet_show_size))"
+                    v-model="query.aggs[label].value"
+                    :key="index"
+                    :value="bucket.key"
+                    name="flavour-3a"
+                  >
+                    {{ bucket.key }}
+                    <b-badge>{{bucket.doc_count.toLocaleString()}}</b-badge>
+                  </b-form-checkbox>
+                </b-form-group>
+                <div class="text-right">
+                  <b-button
+                    v-if="agg.buckets.length > facet_show_size"
+                    type="button"
+                    @click="query.aggs[label].flg = !query.aggs[label].flg"
+                    variant="link"
+                    size="sm"
+                  >
+                    <template v-if="query.aggs[label].flg">Show less</template>
+                    <template v-else>Show more {{agg.buckets.length - facet_show_size}} items</template>
+                  </b-button>
+                </div>
+                <b-button
+                  type="button"
+                  @click="search"
+                  class="mb-3"
+                  size="sm"
+                  variant="primary"
+                >Update</b-button>
+              </b-card>
+            </div>
           </b-col>
         </b-row>
       </b-container>
     </div>
 
-    <b-container :fluid="fluid" v-show="curation">
-      <b-row class="my-5">
-        
-        <b-col :sm="sidebar_open_flg ? 8 : 12" order-sm="2" class="mb-5">
-
-          <h3 class="mb-4">Search results</h3>
-
-          <div class="text-right mb-4" v-show="grid != 'table'">
-            <b-button class="my-2 mr-2" @click="select_all">
-              <i class="fas fa-check-square"></i> Select All
-            </b-button>
-            <b-button class="my-2 mr-2" @click="deselect_all">
-              <i class="fas fa-square"></i> Unselect All
-            </b-button>
-            <b-button class="my-2 mr-2" variant="info" @click="compare">
-              Compare
-              <i class="fas fa-external-link-alt"></i>
-            </b-button>
-          </div>
-
-          <b-pagination
-            v-if="total > 0"
-            v-model="currentPage"
-            :total-rows="total"
-            :per-page="perPage"
-            aria-controls="my-table"
-            align="center"
-            class="mb-4"
-          ></b-pagination>
-
-          <b-row v-show="grid == 'grid'">
-            <b-col :sm="(12/col)" v-for="(value, index) in hits" :key="index">
-              <b-card no-body class="mb-4">
-                <b-link :href="value._url" target="_blank" style="background-color: black;">
-                  <b-img-lazy
-                    v-if="value._thumbnail"
-                    :src="value._thumbnail"
-                    alt="Image 1"
-                    style="display: flex; margin: auto; max-height: 150px; max-width: 100%;"
-                  ></b-img-lazy>
-                </b-link>
-
-                <b-card-body>
-                  <b-link :href="value._url" target="_blank">
-                    <b>{{value._label}}</b>
-                  </b-link>
-
-                  <b-form-checkbox v-model="value._checked" name="check-button" switch></b-form-checkbox>
-                </b-card-body>
-              </b-card>
-            </b-col>
-          </b-row>
-
-          <b-card
-            no-body
-            class="mb-4"
-            v-for="(value, index) in hits"
-            :key="index"
-            v-show="grid == 'list'"
-          >
-            <b-card-body>
-              <b-row>
-                <b-col sm="3">
-                  <b-link :href="value._url" target="_blank">
-                    <b-img-lazy
-                      v-if="value._thumbnail"
-                      :src="value._thumbnail"
-                      alt="Image 1"
-                      style="max-height: 150px; max-width: 100%;"
-                      class="pb-2"
-                      center
-                    ></b-img-lazy>
-                  </b-link>
-                </b-col>
-                <b-col sm="9">
-                  <b-link :href="value._url" target="_blank">
-                    <b>{{value._label}}</b>
-                  </b-link>
-                  <b-card-text>{{value.metadata}}</b-card-text>
-                  <b-form-checkbox v-model="value._checked" name="check-button" switch></b-form-checkbox>
-                </b-col>
-              </b-row>
-            </b-card-body>
-          </b-card>
-
-          <b-table
-            class="mb-4"
-            striped
-            hover
-            :fields="fields"
-            :items="items_table"
-            responsive
-            v-show="grid == 'table'"
-          >
-            <template v-slot:cell(_label)="data">
-              <b-link :href="data.item._url" target="_blank">
-                <b>{{data.item._label}}</b>
-              </b-link>
-            </template>
-
-            <template v-slot:cell()="data">{{ data.value }}</template>
-          </b-table>
-
-          <b-pagination
-            v-if="total > 0"
-            v-model="currentPage"
-            :total-rows="total"
-            :per-page="perPage"
-            aria-controls="my-table"
-            align="center"
-            class="mb-4"
-          ></b-pagination>
-        </b-col>
-        <b-col :sm="4" v-show="sidebar_open_flg" order-sm="1">
-          <h3 class="mb-4">Refine your search</h3>
-          <div style="background-color: #f9f6f0" class="p-4">
-          <b-card
-            class="mb-4"
-            v-show="agg.buckets.length > 0"
-            v-for="(agg, label) in data.aggregations"
-            :key="label"
-            :header="label"
-          >
-            
-            <b-form-group>
-              <b-form-checkbox
-                v-for="(bucket, index) in (query.aggs[label].flg ? agg.buckets : agg.buckets.slice(0,facet_show_size))"
-                v-model="query.aggs[label].value"
-                :key="index"
-                :value="bucket.key"
-                name="flavour-3a"
-              >
-                {{ bucket.key }}
-                <b-badge>{{bucket.doc_count.toLocaleString()}}</b-badge>
-              </b-form-checkbox>
-            </b-form-group>
-            <div class="text-right">
-              <b-button
-                v-if="agg.buckets.length > facet_show_size"
-                type="button"
-                @click="query.aggs[label].flg = !query.aggs[label].flg"
-                variant="link"
-                size="sm"
-              >
-                <template v-if="query.aggs[label].flg">Show less</template>
-                <template v-else>Show more {{agg.buckets.length - facet_show_size}} items</template>
-              </b-button>
-            </div>
-            <b-button
-              type="button"
-              @click="search"
-              class="mb-3"
-              size="sm"
-              variant="primary"
-            >
-              Update
-            </b-button>
-            
-          </b-card>
-          </div>
-        </b-col>
-      </b-row>
-    </b-container>
-    <!-- 
-    <footer class="bd-footer text-muted">
-      <div class="container">
-        <hr />
-        <p class="mt-4 pb-5 text-center">
-          <a href="https://researchmap.jp/nakamura.satoru/?lang=english">Satoru Nakamura</a>
-        </p>
-        
-      </div>
-    </footer>
-    -->
     <back-to-top text="Back to top"></back-to-top>
 
     <footer class="py-5 navbar-dark bg-dark text-white">
       <div class="container">
         <p class="mt-4 pb-5 text-center">
-          <a class="text-white" href="https://researchmap.jp/nakamura.satoru/?lang=english">Satoru Nakamura</a>
+          <a
+            class="text-white"
+            href="https://researchmap.jp/nakamura.satoru/?lang=english"
+          >Satoru Nakamura</a>
         </p>
       </div>
     </footer>
@@ -288,34 +278,32 @@
     </b-modal>
 
     <b-modal id="modal-settings" size="lg" title="Settings" hide-footer>
-      <p><a :href="curation" target="_blank">{{curation}}</a></p>
       <p>
-          <b-button class="m-1" @click="sidebar_open_flg = !sidebar_open_flg">
-            <template v-if="sidebar_open_flg">Hide Sidebar</template>
-            <template v-else>Show Sidebar</template>
-          </b-button>
-        </p>
-        <p>
-          <b-button class="m-1" @click="fluid = !fluid">
-            <template v-if="fluid">Container Fluid False</template>
-            <template v-else>Container Fluid True</template>
-          </b-button>
-        </p>
-        <p>
-          <label
-                  class="mr-sm-2"
-                  for="inline-form-custom-select-pref"
-                  v-show="grid == 'grid'"
-                >Per row:</label>
+        <a :href="curation" target="_blank">{{curation}}</a>
+      </p>
+      <p>
+        <b-button class="m-1" @click="sidebar_open_flg = !sidebar_open_flg">
+          <template v-if="sidebar_open_flg">Hide Sidebar</template>
+          <template v-else>Show Sidebar</template>
+        </b-button>
+      </p>
+      <p>
+        <b-button class="m-1" @click="fluid = !fluid">
+          <template v-if="fluid">Container Fluid False</template>
+          <template v-else>Container Fluid True</template>
+        </b-button>
+      </p>
+      <p>
+        <label class="mr-sm-2" for="inline-form-custom-select-pref" v-show="grid == 'grid'">Per row:</label>
 
-                <b-form-select
-                  class="mb-2 mr-sm-2 mb-sm-0"
-                  v-model="col"
-                  :options="{ 12: '12', 6: '6', 4: '4'}"
-                  id="inline-form-custom-select-pref"
-                  v-show="grid == 'grid'"
-                ></b-form-select>
-                </p>
+        <b-form-select
+          class="mb-2 mr-sm-2 mb-sm-0"
+          v-model="col"
+          :options="{ 12: '12', 6: '6', 4: '4'}"
+          id="inline-form-custom-select-pref"
+          v-show="grid == 'grid'"
+        ></b-form-select>
+      </p>
     </b-modal>
   </div>
 </template>
