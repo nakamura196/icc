@@ -15,7 +15,10 @@
             <!-- Navbar dropdowns -->
             <b-nav-item-dropdown text="Menu" right class="m-1">
               <b-dropdown-item v-b-modal.modal-settings v-show="curation">Settings</b-dropdown-item>
-              <b-dropdown-item target="_blank" href="https://github.com/nakamura196/icc">GitHub <i class="fas fa-external-link-alt"></i></b-dropdown-item>
+              <b-dropdown-item target="_blank" href="https://github.com/nakamura196/icc">
+                GitHub
+                <i class="fas fa-external-link-alt"></i>
+              </b-dropdown-item>
             </b-nav-item-dropdown>
           </b-navbar-nav>
         </b-collapse>
@@ -128,7 +131,7 @@
 
                   <b-card-body>
                     <b-link :href="value._url" target="_blank">
-                      <b>{{value._label}}</b>
+                      <b v-html="value._label" />
                     </b-link>
 
                     <b-form-checkbox v-model="value._checked" name="check-button" switch></b-form-checkbox>
@@ -359,7 +362,9 @@ export default {
       fields: [{ name: "Label", key: "_label" }],
       items_table: [],
 
-      sidebar_open_flg: true
+      sidebar_open_flg: true,
+
+      field: null
     };
   },
   mounted() {
@@ -373,6 +378,7 @@ export default {
     this.grid = param.grid ? param.grid : this.grid;
     this.sort = param.sort ? param.sort : this.sort;
     this.curation = param.curation;
+    this.field = param.field ? param.field : null;
     /*
     if (this.curation == null && location.hostname != "localhost") {
       location.href = "http://icc.jp-r.com";
@@ -438,28 +444,49 @@ export default {
               var m = metadata[k];
 
               let label = m.label;
-              let value = m.value;
+              let values = m.value;
 
-              //obj[m.label] = m.value;
-              obj.metadata[label] = value;
-
-              //詳細検索のため？
-              if (fields_tmp.indexOf(label) == -1) {
-                fields_tmp.push(label);
+              //new
+              if (!(values instanceof Array)) {
+                values = [values];
               }
 
-              //-------------
-              //ファセットのため？ ??
+              for (let k = 0; k < values.length; k++) {
+                let value = values[k];
 
-              if (!field_value_index_map[label]) {
-                field_value_index_map[label] = {};
-              }
+                if (value["@type"] == "oa:Annotation") {
+                  value = value.resource.chars;
+                }
 
-              let tmp = field_value_index_map[label];
-              if (!tmp[value]) {
-                tmp[value] = [];
+                let d = document.createElement('div');
+                d.innerHTML = value;
+                value = d.innerText
+
+                if (label == this.field && this.field != null) {
+                  obj._label = value;
+                }
+
+                //obj[m.label] = m.value;
+                obj.metadata[label] = value;
+
+                //詳細検索のため？
+                if (fields_tmp.indexOf(label) == -1) {
+                  fields_tmp.push(label);
+                }
+
+                //-------------
+                //ファセットのため？ ??
+
+                if (!field_value_index_map[label]) {
+                  field_value_index_map[label] = {};
+                }
+
+                let tmp = field_value_index_map[label];
+                if (!tmp[value]) {
+                  tmp[value] = [];
+                }
+                tmp[value].push(hits_all.length);
               }
-              tmp[value].push(hits_all.length);
             }
           }
 
@@ -804,7 +831,8 @@ export default {
         perPage: this.perPage,
         col: this.col,
         grid: this.grid,
-        sort: this.sort
+        sort: this.sort,
+        field: this.field
       };
       this.$router.replace({ name: "home", query: param }, () => {}, () => {});
     },
