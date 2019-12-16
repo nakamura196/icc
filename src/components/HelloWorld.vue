@@ -2,24 +2,21 @@
   <div style="word-break: break-all;">
     <b-navbar toggleable="lg" type="dark" variant="info">
       <b-container :fluid="fluid">
-        <b-navbar-brand href="http://icc.jp-r.com">IIIF Curation Comparison</b-navbar-brand>
+        <b-navbar-brand href="http://icc.jp-r.com">{{title}}</b-navbar-brand>
         <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
         <b-collapse id="nav-collapse" is-nav>
           <!-- Right aligned nav items -->
           <b-navbar-nav class="ml-auto">
             <div v-show="curation">
               <b-button v-b-modal.modal-1 class="m-1">
-                <i class="fas fa-search"></i> Advanced Search
+                <i class="fas fa-search"></i><!--  Advanced Search -->
               </b-button>
             </div>
-            <!-- Navbar dropdowns -->
-            <b-nav-item-dropdown text="Menu" right class="m-1">
-              <b-dropdown-item v-b-modal.modal-settings v-show="curation">Settings</b-dropdown-item>
-              <b-dropdown-item target="_blank" href="https://github.com/nakamura196/icc">
-                GitHub
-                <i class="fas fa-external-link-alt"></i>
-              </b-dropdown-item>
-            </b-nav-item-dropdown>
+            <div v-show="curation">
+              <b-button v-b-modal.modal-settings class="m-1">
+                <i class="fas fa-cog"></i><!--  Advanced Search -->
+              </b-button>
+            </div>
           </b-navbar-nav>
         </b-collapse>
       </b-container>
@@ -252,11 +249,11 @@
 
     <footer class="py-5 navbar-dark bg-dark text-white">
       <div class="container">
-        <p class="mt-4 pb-5 text-center">
+        <p class="my-2 text-center">
           <a
             class="text-white"
-            href="https://researchmap.jp/nakamura.satoru/?lang=english"
-          >Satoru Nakamura</a>
+            href="https://github.com/nakamura196/icc"
+          >https://github.com/nakamura196/icc</a>
         </p>
       </div>
     </footer>
@@ -364,7 +361,8 @@ export default {
 
       sidebar_open_flg: true,
 
-      field: null
+      field: null,
+      title : "IIIF Curation Comparison"
     };
   },
   mounted() {
@@ -391,6 +389,8 @@ export default {
     //検索を含む
     async init_curation(curation, query) {
       const response = await axios.get(curation);
+
+      this.title = response.data.label
 
       var hits_all = [];
       var selections = response.data.selections;
