@@ -117,7 +117,7 @@
             <b-row v-show="grid == 'grid'">
               <b-col :sm="(12/col)" v-for="(value, index) in hits" :key="index">
                 <b-card no-body class="mb-4">
-                  <b-link :href="value._url" target="_blank" style="background-color: black;">
+                  <b-link :href="value._url" target="_blank" style="background-color: white;">
                     <b-img-lazy
                       v-if="value._thumbnail"
                       :src="value._thumbnail"
@@ -424,19 +424,9 @@ export default {
           };
           count += 1;
 
-          //obj[m.label] = m.value;
-          obj.metadata["manifest_uri"] = manifest_uri;
-          obj.metadata["manifest_label"] = manifest_label;
+          
 
-          //詳細検索のため？
-          if (fields_tmp.indexOf("manifest_uri") == -1) {
-            fields_tmp.push("manifest_uri");
-          }
-
-          //詳細検索のため？
-          if (fields_tmp.indexOf("manifest_label") == -1) {
-            fields_tmp.push("manifest_label");
-          }
+          
 
           if (member["metadata"]) {
             var metadata = member["metadata"];
@@ -495,6 +485,20 @@ export default {
           } else {
             //obj["_thumbnail"] = "https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcRjoqgTWHA5YKAixTxB9-ICn2tAth6CzltOVinamx2-6s6doL3I"
             obj["_thumbnail"] = this.get_thumbnails(obj);
+          }
+
+          //obj[m.label] = m.value;
+          obj.metadata["manifest_label"] = manifest_label;
+          obj.metadata["manifest_uri"] = manifest_uri;
+
+          //詳細検索のため？
+          if (fields_tmp.indexOf("manifest_label") == -1) {
+            fields_tmp.push("manifest_label");
+          }
+
+          //詳細検索のため？
+          if (fields_tmp.indexOf("manifest_uri") == -1) {
+            fields_tmp.push("manifest_uri");
           }
 
           hits_all.push(obj);
