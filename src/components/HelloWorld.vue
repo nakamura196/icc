@@ -117,7 +117,7 @@
             <b-row v-show="grid == 'grid'">
               <b-col :sm="(12/col)" v-for="(value, index) in hits" :key="index">
                 <b-card no-body class="mb-4">
-                  <b-link :href="value._url" target="_blank" style="background-color: white;">
+                  <b-link :href="value._related ? value._related : value._url" target="_blank" style="background-color: white;">
                     <b-img-lazy
                       v-if="value._thumbnail"
                       :src="value._thumbnail"
@@ -127,7 +127,7 @@
                   </b-link>
 
                   <b-card-body>
-                    <b-link :href="value._url" target="_blank">
+                    <b-link :href="value._related ? value._related : value._url" target="_blank">
                       <b v-html="value._label" />
                     </b-link>
 
@@ -147,7 +147,7 @@
               <b-card-body>
                 <b-row>
                   <b-col sm="3">
-                    <b-link :href="value._url" target="_blank">
+                    <b-link :href="value._related ? value._related : value._url" target="_blank">
                       <b-img-lazy
                         v-if="value._thumbnail"
                         :src="value._thumbnail"
@@ -159,10 +159,16 @@
                     </b-link>
                   </b-col>
                   <b-col sm="9">
-                    <b-link :href="value._url" target="_blank">
+                    <b-link :href="value._related ? value._related : value._url" target="_blank">
                       <b>{{value._label}}</b>
                     </b-link>
-                    <b-card-text>{{value.metadata}}</b-card-text>
+                    <b-card-text>
+                      <template v-for="(obj, index2) in value.metadata">
+                        <span class="mr-4" v-if="obj != ''" :key="index2">
+                          <b>{{index2}} : </b>{{obj}}
+                        </span>
+                      </template>
+                      </b-card-text>
                     <b-form-checkbox v-model="value._checked" name="check-button" switch></b-form-checkbox>
                   </b-col>
                 </b-row>
@@ -179,7 +185,7 @@
               v-show="grid == 'table'"
             >
               <template v-slot:cell(_label)="data">
-                <b-link :href="data.item._url" target="_blank">
+                <b-link :href="data.item._related ? data.item._related : data.item._url" target="_blank">
                   <b>{{data.item._label}}</b>
                 </b-link>
               </template>
@@ -422,6 +428,11 @@ export default {
             _manifest: selection.within["@id"],
             metadata: {}
           };
+
+          if(member.related){
+            obj._related = member.related
+          }
+
           count += 1;
 
           
@@ -488,17 +499,17 @@ export default {
           }
 
           //obj[m.label] = m.value;
-          obj.metadata["manifest_label"] = manifest_label;
-          obj.metadata["manifest_uri"] = manifest_uri;
+          obj.metadata["Manifest Label"] = manifest_label;
+          obj.metadata["Manifest URI"] = manifest_uri;
 
           //詳細検索のため？
-          if (fields_tmp.indexOf("manifest_label") == -1) {
-            fields_tmp.push("manifest_label");
+          if (fields_tmp.indexOf("Manifest Label") == -1) {
+            fields_tmp.push("Manifest Label");
           }
 
           //詳細検索のため？
-          if (fields_tmp.indexOf("manifest_uri") == -1) {
-            fields_tmp.push("manifest_uri");
+          if (fields_tmp.indexOf("Manifest URI") == -1) {
+            fields_tmp.push("Manifest URI");
           }
 
           hits_all.push(obj);
@@ -838,6 +849,7 @@ export default {
         sort: this.sort,
         field: this.field
       };
+      console.log(param)
       this.$router.replace({ name: "home", query: param }, () => {}, () => {});
     },
     //フォームを追加するメソッド
