@@ -119,8 +119,7 @@
                 <b-card no-body class="mb-4">
                   <b-link :href="value._related ? value._related : value._url" target="_blank" style="background-color: white;">
                     <b-img-lazy
-                      v-if="value._thumbnail"
-                      :src="value._thumbnail"
+                      :src="thumbnails[value._id]"
                       alt="Image 1"
                       style="display: flex; margin: auto; max-height: 150px; max-width: 100%;"
                     ></b-img-lazy>
@@ -148,9 +147,12 @@
                 <b-row>
                   <b-col sm="3">
                     <b-link :href="value._related ? value._related : value._url" target="_blank">
-                      <b-img-lazy
+                      <!--
                         v-if="value._thumbnail"
                         :src="value._thumbnail"
+                      -->
+                      <b-img-lazy
+                        :src="thumbnails[value._id]"
                         alt="Image 1"
                         style="max-height: 150px; max-width: 100%;"
                         class="pb-2"
@@ -324,6 +326,7 @@ export default {
   name: "HelloWorld",
   data() {
     return {
+      thumbnails: {},
       fluid: false,
       form_value: "",
       data: [],
@@ -396,6 +399,8 @@ export default {
     async init_curation(curation, query) {
       const response = await axios.get(curation);
 
+      const thumbnailsByManifest = {}
+
       this.title = response.data.label
 
       var hits_all = [];
@@ -434,10 +439,6 @@ export default {
           }
 
           count += 1;
-
-          
-
-          
 
           if (member["metadata"]) {
             var metadata = member["metadata"];
@@ -491,11 +492,22 @@ export default {
             }
           }
 
+          let member_id = member["@id"]
           if (member["thumbnail"]) {
             obj["_thumbnail"] = member["thumbnail"];
+            this.thumbnails[member_id] = member["thumbnail"]
           } else {
+            let manifest = selection.within["@id"]
+            if(!thumbnailsByManifest[manifest]){
+              thumbnailsByManifest[manifest] = []
+            }
+            thumbnailsByManifest[manifest].push({
+              "canvas_id" : member_id.split("#")[0],
+              "member_id" : member_id
+            })
+            this.thumbnails[member_id] = "https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcRjoqgTWHA5YKAixTxB9-ICn2tAth6CzltOVinamx2-6s6doL3I"
             //obj["_thumbnail"] = "https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcRjoqgTWHA5YKAixTxB9-ICn2tAth6CzltOVinamx2-6s6doL3I"
-            obj["_thumbnail"] = this.get_thumbnails(obj);
+            //obj["_thumbnail"] = this.get_thumbnails(obj);
           }
 
           //obj[m.label] = m.value;
@@ -517,7 +529,6 @@ export default {
       }
 
       this.hits_all = hits_all;
-      //console.log(hits_all)
 
       for (var i_ = 0; i_ < fields_tmp.length; i_++) {
         let label = fields_tmp[i_];
@@ -555,6 +566,8 @@ export default {
       this.df_map = df_map;
 
       this.init(query);
+
+      this.get_thumbnails2(thumbnailsByManifest)
     },
     init(query) {
       let op = [];
@@ -849,6 +862,7 @@ export default {
         sort: this.sort,
         field: this.field
       };
+      // eslint-disable-next-line
       console.log(param)
       this.$router.replace({ name: "home", query: param }, () => {}, () => {});
     },
@@ -920,6 +934,53 @@ export default {
         image = image.replace("info.json", area + "/200,/0/default.jpg");
       }
       return image;
+    },
+    async get_thumbnails2(thumbnailsByManifest) {
+      let thumbnails = this.thumbnails
+      for(let manifest in thumbnailsByManifest){
+        let arr = thumbnailsByManifest[manifest]
+
+        let map = await axios.get(manifest).then(response => {
+          let mani_data = response.data;
+          var canvas_img_map = {};
+          this.mani_arr[manifest] = canvas_img_map;
+          var canvases = mani_data["sequences"][0]["canvases"];
+
+          let map = {}
+
+          for (var i = 0; i < canvases.length; i++) {
+            var canvas = canvases[i];
+            if (canvas["images"][0]["resource"]["service"]) {
+              canvas_img_map[canvas["@id"]] =
+                canvas["images"][0]["resource"]["service"]["@id"] +
+                "/info.json";
+            } else {
+              canvas_img_map[canvas["@id"]] =
+                canvas["images"][0]["resource"]["@id"];
+            }
+          }
+
+          for(let i = 0; i < arr.length; i++){
+            let obj = arr[i]
+            let member_id = obj.member_id
+            let tmp = member_id.split("#xywh=")
+            let canvas_uri = tmp[0];
+            let area = tmp[1];
+            let image = canvas_img_map[canvas_uri]
+            if (image.indexOf("info.json") != -1) {
+              image = image.replace("info.json", area + "/200,/0/default.jpg");
+            }
+            map[member_id] = image
+          }
+          return map
+        });
+        for(let member_id in map){
+          thumbnails[member_id] = map[member_id]
+        }
+      }
+
+      this.thumbnails = {}
+      this.thumbnails = thumbnails
     },
     get_sorted_ids() {
       let sort_param = this.sort.split("_");
